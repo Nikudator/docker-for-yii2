@@ -1,0 +1,80 @@
+services:
+  nginx:
+    image: nginx:latest
+    hostname: nginx
+    container_name: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./php-fpm/data/www:${VOLUME_WWW}
+      - ./nginx/log:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    links:
+      - db  
+      - php-fpm
+    networks:
+      default:
+        ipv4_address: ${PROJECT_IP_MASK}.10
+    depends_on: 
+      - db  
+      - php-fpm
+    restart:
+      always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  php-fpm:
+    hostname: php-fpm
+    container_name: php-fpm
+    build: ./php-fpm
+    expose:
+      - 9000
+    volumes:
+      - ./php-fpm/data/www:${VOLUME_WWW}
+      - ./php-fpm/log:/var/log/php
+      - ./php-fpm/php:/usr/local/etc/php/conf.d/php:ro
+    networks:
+      default:
+        ipv4_address: ${PROJECT_IP_MASK}.20
+    restart:
+      always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  db:
+    image: mysql:latest
+    hostname: db
+    container_name: mysql
+    expose:
+      - 3306
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/etc:/etc/mysql:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}      
+    networks:
+      default:
+        ipv4_address: ${PROJECT_IP_MASK}.30
+    restart:
+      always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${PROJECT_IP_MASK}.0/24
